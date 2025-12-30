@@ -154,7 +154,7 @@ services:
       dockerfile: Dockerfile
     container_name: shopping-frontend
     environment:
-      - API_URL=http://api-gateway:${API_GATEWAY_PORT}
+      - API_GATEWAY_PORT=${API_GATEWAY_PORT:-8080}
     depends_on:
       - api-gateway
     ports:
