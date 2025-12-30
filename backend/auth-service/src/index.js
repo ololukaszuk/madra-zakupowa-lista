@@ -78,7 +78,7 @@ app.post('/api/auth/register', [
 
 // Logowanie
 app.post('/api/auth/login', [
-  body('email').isEmail().normalizeEmail(),
+  body('email').isEmail({ allow_localhost_domain: true }).normalizeEmail(),
   body('password').notEmpty()
 ], async (req, res) => {
   const errors = validationResult(req);
