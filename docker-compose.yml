@@ -20,7 +20,7 @@ services:
 
   # Elasticsearch for fuzzy search
   elasticsearch:
-    image: elasticsearch:8.11.0
+    build: ./elasticsearch
     container_name: shopping-elasticsearch
     environment:
       - discovery.type=single-node

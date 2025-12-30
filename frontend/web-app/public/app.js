@@ -1,9 +1,7 @@
 const { useState, useEffect, useCallback, useRef, createElement: h } = React;
 
 // API Configuration
-const API_BASE = window.location.hostname === 'localhost' 
-  ? 'http://localhost:8080' 
-  : `http://${window.location.hostname}:8080`;
+const API_BASE = '';
 
 // API Helper
 const api = {
