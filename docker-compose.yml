@@ -1,0 +1,185 @@
+version: '3.8'
+
+services:
+  # Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: shopping-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shopping-network
+
+  # Elasticsearch for fuzzy search
+  elasticsearch:
+    image: elasticsearch:8.11.0
+    container_name: shopping-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"\\|\"status\":\"yellow\"'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - shopping-network
+
+  # Auth Service
+  auth-service:
+    build:
+      context: ./backend/auth-service
+      dockerfile: Dockerfile
+    container_name: shopping-auth-service
+    environment:
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRATION=${JWT_EXPIRATION}
+      - SERVICE_PORT=${AUTH_SERVICE_PORT}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${AUTH_SERVICE_PORT}:${AUTH_SERVICE_PORT}"
+    networks:
+      - shopping-network
+
+  # Shopping Service
+  shopping-service:
+    build:
+      context: ./backend/shopping-service
+      dockerfile: Dockerfile
+    container_name: shopping-shopping-service
+    environment:
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - SERVICE_PORT=${SHOPPING_SERVICE_PORT}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${SHOPPING_SERVICE_PORT}:${SHOPPING_SERVICE_PORT}"
+    networks:
+      - shopping-network
+
+  # Analytics Service
+  analytics-service:
+    build:
+      context: ./backend/analytics-service
+      dockerfile: Dockerfile
+    container_name: shopping-analytics-service
+    environment:
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - OLLAMA_URL=${OLLAMA_URL}
+      - OLLAMA_WEBSEARCH_URL=${OLLAMA_WEBSEARCH_URL}
+      - OLLAMA_MODEL=${OLLAMA_MODEL}
+      - SERVICE_PORT=${ANALYTICS_SERVICE_PORT}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${ANALYTICS_SERVICE_PORT}:${ANALYTICS_SERVICE_PORT}"
+    networks:
+      - shopping-network
+
+  # Suggestion Service
+  suggestion-service:
+    build:
+      context: ./backend/suggestion-service
+      dockerfile: Dockerfile
+    container_name: shopping-suggestion-service
+    environment:
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - ELASTICSEARCH_HOST=${ELASTICSEARCH_HOST}
+      - ELASTICSEARCH_PORT=${ELASTICSEARCH_PORT}
+      - JWT_SECRET=${JWT_SECRET}
+      - SERVICE_PORT=${SUGGESTION_SERVICE_PORT}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    ports:
+      - "${SUGGESTION_SERVICE_PORT}:${SUGGESTION_SERVICE_PORT}"
+    networks:
+      - shopping-network
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: ./backend/api-gateway
+      dockerfile: Dockerfile
+    container_name: shopping-api-gateway
+    environment:
+      - AUTH_SERVICE_URL=http://auth-service:${AUTH_SERVICE_PORT}
+      - SHOPPING_SERVICE_URL=http://shopping-service:${SHOPPING_SERVICE_PORT}
+      - ANALYTICS_SERVICE_URL=http://analytics-service:${ANALYTICS_SERVICE_PORT}
+      - SUGGESTION_SERVICE_URL=http://suggestion-service:${SUGGESTION_SERVICE_PORT}
+      - JWT_SECRET=${JWT_SECRET}
+      - SERVICE_PORT=${API_GATEWAY_PORT}
+    depends_on:
+      - auth-service
+      - shopping-service
+      - analytics-service
+      - suggestion-service
+    ports:
+      - "${API_GATEWAY_PORT}:${API_GATEWAY_PORT}"
+    networks:
+      - shopping-network
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend/web-app
+      dockerfile: Dockerfile
+    container_name: shopping-frontend
+    environment:
+      - API_URL=http://api-gateway:${API_GATEWAY_PORT}
+    depends_on:
+      - api-gateway
+    ports:
+      - "${FRONTEND_PORT}:80"
+    networks:
+      - shopping-network
+
+volumes:
+  postgres_data:
+  es_data:
+
+networks:
+  shopping-network:
+    driver: bridge

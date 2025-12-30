@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#4f46e5">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Smart Lista Zakupów</title>
+  <link rel="manifest" href="/manifest.json">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    :root {
+      --primary: #4f46e5;
+      --primary-dark: #4338ca;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --bg: #f3f4f6;
+      --card: #ffffff;
+      --text: #1f2937;
+      --text-light: #6b7280;
+      --border: #e5e7eb;
+      --shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    #root { min-height: 100vh; }
+    
+    .app { min-height: 100vh; display: flex; flex-direction: column; }
+    
+    /* Header */
+    .header {
+      background: var(--primary);
+      color: white;
+      padding: 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--shadow);
+    }
+    .header h1 { font-size: 1.25rem; font-weight: 600; }
+    .header-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+    
+    /* Main content */
+    .main { flex: 1; padding: 1rem; max-width: 600px; margin: 0 auto; width: 100%; }
+    
+    /* Cards */
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card-body { padding: 1rem; }
+    
+    /* Buttons */
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: all 0.2s;
+      touch-action: manipulation;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-success { background: var(--success); color: white; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
+    .btn-sm { padding: 0.5rem 1rem; font-size: 0.875rem; }
+    .btn-block { width: 100%; }
+    .btn-icon { padding: 0.5rem; border-radius: 50%; }
+    
+    /* Forms */
+    .form-group { margin-bottom: 1rem; }
+    .form-label { display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem; }
+    .form-input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: border-color 0.2s;
+    }
+    .form-input:focus { outline: none; border-color: var(--primary); }
+    
+    /* Checkbox list */
+    .checklist { list-style: none; }
+    .checklist-item {
+      display: flex;
+      align-items: center;
+      padding: 1rem;
+      border-bottom: 1px solid var(--border);
+      gap: 1rem;
+    }
+    .checklist-item:last-child { border-bottom: none; }
+    .checklist-item.checked { opacity: 0.6; }
+    .checklist-item.checked .item-name { text-decoration: line-through; }
+    
+    .checkbox {
+      width: 24px;
+      height: 24px;
+      border: 2px solid var(--border);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+    .checkbox.checked {
+      background: var(--success);
+      border-color: var(--success);
+      color: white;
+    }
+    
+    .item-content { flex: 1; min-width: 0; }
+    .item-name { font-weight: 500; word-break: break-word; }
+    .item-meta { font-size: 0.875rem; color: var(--text-light); }
+    
+    .item-actions { display: flex; gap: 0.25rem; }
+    
+    /* Input with suggestions */
+    .input-wrapper { position: relative; }
+    .suggestions {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 50;
+    }
+    .suggestion-item {
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+    }
+    .suggestion-item:last-child { border-bottom: none; }
+    .suggestion-item:hover { background: var(--bg); }
+    .suggestion-item strong { color: var(--primary); }
+    
+    /* Tabs */
+    .tabs {
+      display: flex;
+      background: var(--card);
+      border-radius: 8px;
+      padding: 4px;
+      margin-bottom: 1rem;
+    }
+    .tab {
+      flex: 1;
+      padding: 0.75rem;
+      text-align: center;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .tab.active { background: var(--primary); color: white; }
+    
+    /* Navigation */
+    .nav-bottom {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--card);
+      border-top: 1px solid var(--border);
+      display: flex;
+      padding: 0.5rem;
+      padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+      z-index: 100;
+    }
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0.5rem;
+      color: var(--text-light);
+      text-decoration: none;
+      font-size: 0.75rem;
+      border: none;
+      background: none;
+      cursor: pointer;
+    }
+    .nav-item.active { color: var(--primary); }
+    .nav-item svg { width: 24px; height: 24px; margin-bottom: 4px; }
+    
+    /* Add item form */
+    .add-item-form {
+      display: flex;
+      gap: 0.5rem;
+      padding: 1rem;
+      background: var(--card);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      margin-bottom: 1rem;
+    }
+    .add-item-form .form-input { flex: 1; }
+    
+    /* Stats */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .stat-card {
+      background: var(--card);
+      padding: 1rem;
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+    .stat-value { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
+    .stat-label { font-size: 0.875rem; color: var(--text-light); }
+    
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 200;
+      padding: 1rem;
+    }
+    .modal {
+      background: var(--card);
+      border-radius: 16px 16px 0 0;
+      width: 100%;
+      max-width: 500px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    .modal-header {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      background: var(--card);
+    }
+    .modal-body { padding: 1rem; }
+    
+    /* Badge */
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .badge-primary { background: #e0e7ff; color: var(--primary); }
+    .badge-success { background: #d1fae5; color: var(--success); }
+    .badge-warning { background: #fef3c7; color: var(--warning); }
+    
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--text-light);
+    }
+    .empty-state svg { width: 64px; height: 64px; margin-bottom: 1rem; opacity: 0.5; }
+    
+    /* Loading */
+    .loading { text-align: center; padding: 2rem; color: var(--text-light); }
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--text);
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      z-index: 300;
+      animation: fadeIn 0.3s;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(10px); } }
+    
+    /* Utilities */
+    .mb-1 { margin-bottom: 0.5rem; }
+    .mb-2 { margin-bottom: 1rem; }
+    .mt-2 { margin-top: 1rem; }
+    .text-center { text-align: center; }
+    .text-sm { font-size: 0.875rem; }
+    .text-muted { color: var(--text-light); }
+    .flex { display: flex; }
+    .flex-between { display: flex; justify-content: space-between; align-items: center; }
+    .gap-1 { gap: 0.5rem; }
+    .gap-2 { gap: 1rem; }
+    
+    /* Safe area */
+    .main { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+    
+    /* Progress bar */
+    .progress {
+      height: 8px;
+      background: var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .progress-bar {
+      height: 100%;
+      background: var(--success);
+      transition: width 0.3s;
+    }
+    
+    /* Swipe actions hint */
+    .swipe-hint {
+      font-size: 0.75rem;
+      color: var(--text-light);
+      text-align: center;
+      padding: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

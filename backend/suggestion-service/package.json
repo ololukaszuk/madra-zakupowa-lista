@@ -1,0 +1,17 @@
+{
+  "name": "suggestion-service",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "pg": "^8.11.3",
+    "jsonwebtoken": "^9.0.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "@elastic/elasticsearch": "^8.11.0"
+  }
+}

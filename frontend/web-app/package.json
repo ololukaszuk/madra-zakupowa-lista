@@ -1,0 +1,14 @@
+{
+  "name": "shopping-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.21.0"
+  },
+  "scripts": {
+    "start": "npx serve -s build -l 80",
+    "build": "node build.js"
+  }
+}
