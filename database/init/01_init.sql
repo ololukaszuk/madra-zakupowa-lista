@@ -113,11 +113,6 @@ CREATE INDEX idx_item_history_purchased ON item_history(purchased_at);
 CREATE INDEX idx_products_name_trgm ON products USING gin(name gin_trgm_ops);
 CREATE INDEX idx_shopping_items_name_trgm ON shopping_items USING gin(name gin_trgm_ops);
 
--- Insert default admin
-INSERT INTO users (email, password_hash, name, role, is_approved)
-VALUES ('admin@localhost', '$2b$10$rQEY7XoVrHhKqKqHJVv3XeZKq.0D.K1XvK.0D.K1XvK.0D.K1Xv', 'Admin', 'admin', TRUE);
--- Default password is: admin123 (will be hashed properly on first start)
-
 -- Insert some sample products
 INSERT INTO products (name, category, default_unit) VALUES
 ('Mleko', 'Nabiał', 'l'),

@@ -45,7 +45,7 @@ const requireRole = (...roles) => (req, res, next) => {
 
 // Rejestracja
 app.post('/api/auth/register', [
-  body('email').isEmail().normalizeEmail(),
+  body('email').isEmail({ require_tld: false }).normalizeEmail(),
   body('password').isLength({ min: 6 }),
   body('name').trim().isLength({ min: 2 })
 ], async (req, res) => {
@@ -78,7 +78,7 @@ app.post('/api/auth/register', [
 
 // Logowanie
 app.post('/api/auth/login', [
-  body('email').isEmail({ allow_localhost_domain: true }).normalizeEmail(),
+  body('email').isEmail({ require_tld: false }).normalizeEmail(),
   body('password').notEmpty()
 ], async (req, res) => {
   const errors = validationResult(req);
@@ -309,4 +309,22 @@ app.get('/api/auth/groups/:id/members', verifyToken, async (req, res) => {
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 const PORT = process.env.SERVICE_PORT || 8081;
+
+// Inicjalizacja admina przy starcie
+async function initAdmin() {
+  const { ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_NAME } = process.env;
+  if (!ADMIN_EMAIL || !ADMIN_PASSWORD) return;
+  
+  const existing = await pool.query('SELECT id FROM users WHERE email = $1', [ADMIN_EMAIL]);
+  if (existing.rows.length === 0) {
+    const hash = await bcrypt.hash(ADMIN_PASSWORD, 10);
+    await pool.query(
+      'INSERT INTO users (email, password_hash, name, role, is_approved) VALUES ($1, $2, $3, $4, TRUE)',
+      [ADMIN_EMAIL, hash, ADMIN_NAME || 'Admin', 'admin']
+    );
+    console.log('Admin user created:', ADMIN_EMAIL);
+  }
+}
+
+initAdmin().catch(console.error);
 app.listen(PORT, () => console.log(`Auth service running on port ${PORT}`));
