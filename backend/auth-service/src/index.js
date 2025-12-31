@@ -45,7 +45,7 @@ const requireRole = (...roles) => (req, res, next) => {
 
 // Rejestracja
 app.post('/api/auth/register', [
-  body('email').isEmail({ require_tld: false }),
+  body('email').isEmail({ require_tld: false }).normalizeEmail(),,
   body('password').isLength({ min: 6 }),
   body('name').trim().isLength({ min: 2 })
 ], async (req, res) => {
@@ -78,7 +78,7 @@ app.post('/api/auth/register', [
 
 // Logowanie
 app.post('/api/auth/login', [
-  body('email').isEmail({ require_tld: false }),
+  body('email').isEmail({ require_tld: false }).normalizeEmail(),,
   body('password').notEmpty()
 ], async (req, res) => {
   const errors = validationResult(req);
