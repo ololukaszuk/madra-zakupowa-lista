@@ -72,7 +72,7 @@ CREATE TABLE shopping_items (
 -- Products catalog (for suggestions)
 CREATE TABLE products (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(200) NOT NULL,
+    name VARCHAR(200) NOT NULL UNIQUE,
     category VARCHAR(100),
     default_unit VARCHAR(50),
     usage_count INTEGER DEFAULT 0,
@@ -115,23 +115,365 @@ CREATE INDEX idx_shopping_items_name_trgm ON shopping_items USING gin(name gin_t
 
 -- Insert some sample products
 INSERT INTO products (name, category, default_unit) VALUES
+-- Nabiał
 ('Mleko', 'Nabiał', 'l'),
-('Chleb', 'Pieczywo', 'szt'),
+('Mleko bez laktozy', 'Nabiał', 'l'),
+('Jogurt naturalny', 'Nabiał', 'szt'),
+('Jogurt owocowy', 'Nabiał', 'szt'),
 ('Masło', 'Nabiał', 'szt'),
-('Jajka', 'Nabiał', 'szt'),
+('Margaryna', 'Nabiał', 'szt'),
+('Śmietana 18%', 'Nabiał', 'szt'),
+('Śmietana 30%', 'Nabiał', 'szt'),
 ('Ser żółty', 'Nabiał', 'kg'),
+('Ser pleśniowy', 'Nabiał', 'szt'),
+('Twaróg', 'Nabiał', 'kg'),
+('Jajka', 'Nabiał', 'szt'),
+
+-- Pieczywo
+('Chleb pszenny', 'Pieczywo', 'szt'),
+('Chleb razowy', 'Pieczywo', 'szt'),
+('Bułki kajzerki', 'Pieczywo', 'szt'),
+('Bułki grahamki', 'Pieczywo', 'szt'),
+('Bagietka', 'Pieczywo', 'szt'),
+('Tortilla pszenna', 'Pieczywo', 'szt'),
+
+-- Warzywa
 ('Pomidory', 'Warzywa', 'kg'),
 ('Ogórki', 'Warzywa', 'kg'),
+('Papryka czerwona', 'Warzywa', 'kg'),
+('Papryka żółta', 'Warzywa', 'kg'),
+('Marchew', 'Warzywa', 'kg'),
+('Ziemniaki', 'Warzywa', 'kg'),
+('Cebula', 'Warzywa', 'kg'),
+('Czosnek', 'Warzywa', 'szt'),
+('Brokuł', 'Warzywa', 'szt'),
+('Kalafior', 'Warzywa', 'szt'),
+('Sałata lodowa', 'Warzywa', 'szt'),
+
+-- Owoce
 ('Jabłka', 'Owoce', 'kg'),
 ('Banany', 'Owoce', 'kg'),
+('Pomarańcze', 'Owoce', 'kg'),
+('Mandarynki', 'Owoce', 'kg'),
+('Cytryny', 'Owoce', 'kg'),
+('Winogrona', 'Owoce', 'kg'),
+('Truskawki', 'Owoce', 'kg'),
+('Borówki', 'Owoce', 'kg'),
+
+-- Mięso
 ('Kurczak', 'Mięso', 'kg'),
+('Pierś z kurczaka', 'Mięso', 'kg'),
+('Udka z kurczaka', 'Mięso', 'kg'),
 ('Wołowina', 'Mięso', 'kg'),
+('Wieprzowina', 'Mięso', 'kg'),
+('Schab', 'Mięso', 'kg'),
+('Karkówka', 'Mięso', 'kg'),
+('Boczek', 'Mięso', 'kg'),
+
+-- Wędliny
+('Szynka', 'Wędliny', 'kg'),
+('Parówki', 'Wędliny', 'kg'),
+('Kiełbasa śląska', 'Wędliny', 'kg'),
+('Salami', 'Wędliny', 'kg'),
+('Baleron', 'Wędliny', 'kg'),
+
+-- Ryby
+('Łosoś świeży', 'Ryby', 'kg'),
+('Łosoś wędzony', 'Ryby', 'kg'),
+('Mintaj mrożony', 'Ryby', 'kg'),
+('Tuńczyk w puszce', 'Ryby', 'szt'),
+('Śledzie', 'Ryby', 'kg'),
+
+-- Produkty sypkie
 ('Ryż', 'Produkty sypkie', 'kg'),
 ('Makaron', 'Produkty sypkie', 'kg'),
-('Olej', 'Tłuszcze', 'l'),
+('Kasza gryczana', 'Produkty sypkie', 'kg'),
+('Kasza jaglana', 'Produkty sypkie', 'kg'),
 ('Cukier', 'Produkty sypkie', 'kg'),
-('Mąka', 'Produkty sypkie', 'kg'),
-('Kawa', 'Napoje', 'szt'),
-('Herbata', 'Napoje', 'szt'),
+('Cukier brązowy', 'Produkty sypkie', 'kg'),
+('Mąka pszenna', 'Produkty sypkie', 'kg'),
+('Mąka żytnia', 'Produkty sypkie', 'kg'),
+('Płatki owsiane', 'Produkty sypkie', 'kg'),
+
+-- Tłuszcze
+('Olej rzepakowy', 'Tłuszcze', 'l'),
+('Olej słonecznikowy', 'Tłuszcze', 'l'),
+('Oliwa z oliwek', 'Tłuszcze', 'l'),
+('Masło klarowane', 'Tłuszcze', 'szt'),
+
+-- Przyprawy
+('Sól', 'Przyprawy', 'kg'),
+('Pieprz czarny', 'Przyprawy', 'szt'),
+('Papryka słodka', 'Przyprawy', 'szt'),
+('Papryka ostra', 'Przyprawy', 'szt'),
+('Bazylia', 'Przyprawy', 'szt'),
+('Oregano', 'Przyprawy', 'szt'),
+('Cynamon', 'Przyprawy', 'szt'),
+
+-- Napoje
 ('Woda mineralna', 'Napoje', 'l'),
-('Sok pomarańczowy', 'Napoje', 'l');
+('Woda gazowana', 'Napoje', 'l'),
+('Sok pomarańczowy', 'Napoje', 'l'),
+('Sok jabłkowy', 'Napoje', 'l'),
+('Cola', 'Napoje', 'l'),
+('Kawa mielona', 'Napoje', 'szt'),
+('Kawa ziarnista', 'Napoje', 'szt'),
+('Herbata czarna', 'Napoje', 'szt'),
+('Herbata zielona', 'Napoje', 'szt'),
+
+-- Słodycze
+('Czekolada mleczna', 'Słodycze', 'szt'),
+('Czekolada gorzka', 'Słodycze', 'szt'),
+('Baton', 'Słodycze', 'szt'),
+('Ciastka', 'Słodycze', 'szt'),
+('Cukierki', 'Słodycze', 'kg'),
+('Lody', 'Słodycze', 'szt'),
+
+-- Mrożonki
+('Pizza mrożona', 'Mrożonki', 'szt'),
+('Frytki mrożone', 'Mrożonki', 'kg'),
+('Warzywa mrożone', 'Mrożonki', 'kg'),
+('Lody waniliowe', 'Mrożonki', 'szt'),
+
+-- Chemia domowa
+('Płyn do naczyń', 'Chemia domowa', 'szt'),
+('Proszek do prania', 'Chemia domowa', 'kg'),
+('Płyn do płukania', 'Chemia domowa', 'l'),
+('Papier toaletowy', 'Chemia domowa', 'szt'),
+('Ręczniki papierowe', 'Chemia domowa', 'szt'),
+('Środek do mycia podłóg', 'Chemia domowa', 'l'),
+
+-- Higiena
+('Mydło', 'Higiena', 'szt'),
+('Szampon', 'Higiena', 'szt'),
+('Żel pod prysznic', 'Higiena', 'szt'),
+('Pasta do zębów', 'Higiena', 'szt'),
+('Szczoteczka do zębów', 'Higiena', 'szt'),
+('Dezodorant', 'Higiena', 'szt'),
+
+-- Gotowe dania
+('Lasagne', 'Dania gotowe', 'szt'),
+('Spaghetti bolognese', 'Dania gotowe', 'szt'),
+('Pierogi ruskie', 'Dania gotowe', 'kg'),
+('Pierogi z mięsem', 'Dania gotowe', 'kg'),
+('Gołąbki', 'Dania gotowe', 'kg'),
+('Naleśniki', 'Dania gotowe', 'szt'),
+('Placki ziemniaczane', 'Dania gotowe', 'kg'),
+
+-- Fast food / przekąski
+('Hot dog', 'Przekąski', 'szt'),
+('Hamburger', 'Przekąski', 'szt'),
+('Zapiekanka', 'Przekąski', 'szt'),
+('Chipsy ziemniaczane', 'Przekąski', 'szt'),
+('Nachosy', 'Przekąski', 'szt'),
+('Paluszki', 'Przekąski', 'szt'),
+('Popcorn', 'Przekąski', 'szt'),
+('Krakersy', 'Przekąski', 'szt'),
+
+-- Sosy i dodatki
+('Ketchup', 'Sosy', 'szt'),
+('Musztarda', 'Sosy', 'szt'),
+('Majonez', 'Sosy', 'szt'),
+('Sos czosnkowy', 'Sosy', 'szt'),
+('Sos barbecue', 'Sosy', 'szt'),
+('Sos sojowy', 'Sosy', 'szt'),
+('Ocet spirytusowy', 'Sosy', 'l'),
+('Ocet balsamiczny', 'Sosy', 'l'),
+
+-- Konserwy
+('Fasola czerwona w puszce', 'Konserwy', 'szt'),
+('Kukurydza konserwowa', 'Konserwy', 'szt'),
+('Groszek konserwowy', 'Konserwy', 'szt'),
+('Ogórki konserwowe', 'Konserwy', 'szt'),
+('Pomidory w puszce', 'Konserwy', 'szt'),
+('Koncentrat pomidorowy', 'Konserwy', 'szt'),
+('Pasztet', 'Konserwy', 'szt'),
+
+-- Śniadaniowe
+('Płatki kukurydziane', 'Śniadaniowe', 'szt'),
+('Musli', 'Śniadaniowe', 'kg'),
+('Granola', 'Śniadaniowe', 'kg'),
+('Dżem truskawkowy', 'Śniadaniowe', 'szt'),
+('Dżem morelowy', 'Śniadaniowe', 'szt'),
+('Miód', 'Śniadaniowe', 'szt'),
+('Masło orzechowe', 'Śniadaniowe', 'szt'),
+('Nutella', 'Śniadaniowe', 'szt'),
+
+-- Produkty bio / fit
+('Mleko roślinne migdałowe', 'Bio & Fit', 'l'),
+('Mleko owsiane', 'Bio & Fit', 'l'),
+('Jogurt sojowy', 'Bio & Fit', 'szt'),
+('Tofu naturalne', 'Bio & Fit', 'kg'),
+('Tofu wędzone', 'Bio & Fit', 'kg'),
+('Quinoa', 'Bio & Fit', 'kg'),
+('Chia', 'Bio & Fit', 'kg'),
+('Siemię lniane', 'Bio & Fit', 'kg'),
+
+-- Orzechy i bakalie
+('Orzechy włoskie', 'Bakalie', 'kg'),
+('Orzechy nerkowca', 'Bakalie', 'kg'),
+('Migdały', 'Bakalie', 'kg'),
+('Rodzynki', 'Bakalie', 'kg'),
+('Żurawina suszona', 'Bakalie', 'kg'),
+('Daktyle suszone', 'Bakalie', 'kg'),
+
+-- Alkohole
+('Piwo jasne', 'Alkohol', 'szt'),
+('Piwo ciemne', 'Alkohol', 'szt'),
+('Wino czerwone', 'Alkohol', 'szt'),
+('Wino białe', 'Alkohol', 'szt'),
+('Wódka', 'Alkohol', 'szt'),
+('Whisky', 'Alkohol', 'szt'),
+('Rum', 'Alkohol', 'szt'),
+
+-- Dla dzieci
+('Kaszka mleczna', 'Dla dzieci', 'szt'),
+('Obiadek w słoiczku', 'Dla dzieci', 'szt'),
+('Deserek owocowy', 'Dla dzieci', 'szt'),
+('Sok dla dzieci', 'Dla dzieci', 'l'),
+('Chrupki kukurydziane', 'Dla dzieci', 'szt'),
+
+-- Zwierzęta
+('Karma dla psa sucha', 'Zwierzęta', 'kg'),
+('Karma dla psa mokra', 'Zwierzęta', 'szt'),
+('Karma dla kota sucha', 'Zwierzęta', 'kg'),
+('Karma dla kota mokra', 'Zwierzęta', 'szt'),
+('Żwirek dla kota', 'Zwierzęta', 'kg'),
+('Przysmaki dla psa', 'Zwierzęta', 'szt'),
+
+-- Artykuły papiernicze
+('Zeszyt', 'Papiernicze', 'szt'),
+('Długopis', 'Papiernicze', 'szt'),
+('Ołówek', 'Papiernicze', 'szt'),
+('Marker', 'Papiernicze', 'szt'),
+('Blok rysunkowy', 'Papiernicze', 'szt'),
+('Papier ksero', 'Papiernicze', 'szt'),
+
+-- Dom & kuchnia
+('Folia aluminiowa', 'Dom i kuchnia', 'szt'),
+('Folia spożywcza', 'Dom i kuchnia', 'szt'),
+('Papier do pieczenia', 'Dom i kuchnia', 'szt'),
+('Worki na śmieci', 'Dom i kuchnia', 'szt'),
+('Gąbki do naczyń', 'Dom i kuchnia', 'szt'),
+('Ścierki kuchenne', 'Dom i kuchnia', 'szt'),
+
+-- Elektronika drobna
+('Baterie AA', 'Elektronika', 'szt'),
+('Baterie AAA', 'Elektronika', 'szt'),
+('Żarówka LED', 'Elektronika', 'szt'),
+('Przedłużacz', 'Elektronika', 'szt'),
+('Ładowarka USB', 'Elektronika', 'szt'),
+
+-- Nabiał – marki własne
+('Mleko UHT 2% Mleczna Dolina 1l', 'Nabiał', 'szt'),
+('Mleko UHT 3,2% Mleczna Dolina 1l', 'Nabiał', 'szt'),
+('Jogurt naturalny Fruvita 180g', 'Nabiał', 'szt'),
+('Jogurt truskawkowy Fruvita 180g', 'Nabiał', 'szt'),
+('Masło ekstra Polskie 200g', 'Nabiał', 'szt'),
+('Ser gouda plastry 150g', 'Nabiał', 'szt'),
+('Ser edamski blok 1kg', 'Nabiał', 'szt'),
+('Twaróg półtłusty 250g', 'Nabiał', 'szt'),
+('Śmietana 18% 200g', 'Nabiał', 'szt'),
+('Jajka klasa A M 10 szt', 'Nabiał', 'opak'),
+
+-- Pieczywo
+('Chleb tostowy pszenny 500g', 'Pieczywo', 'szt'),
+('Chleb żytni krojony 500g', 'Pieczywo', 'szt'),
+('Bułki pszenne 6 szt', 'Pieczywo', 'opak'),
+('Bułki maślane 4 szt', 'Pieczywo', 'opak'),
+('Bagietka czosnkowa', 'Pieczywo', 'szt'),
+
+-- Warzywa świeże
+('Pomidory malinowe', 'Warzywa', 'kg'),
+('Pomidory koktajlowe 500g', 'Warzywa', 'opak'),
+('Ogórek gruntowy', 'Warzywa', 'kg'),
+('Papryka mix 500g', 'Warzywa', 'opak'),
+('Marchew myta 1kg', 'Warzywa', 'opak'),
+('Ziemniaki jadalne 2,5kg', 'Warzywa', 'opak'),
+('Cebula żółta 1kg', 'Warzywa', 'opak'),
+('Sałata masłowa', 'Warzywa', 'szt'),
+
+-- Owoce
+('Jabłka ligol', 'Owoce', 'kg'),
+('Banany', 'Owoce', 'kg'),
+('Pomarańcze 2kg', 'Owoce', 'opak'),
+('Mandarynki 1kg', 'Owoce', 'opak'),
+('Winogrona jasne 500g', 'Owoce', 'opak'),
+('Borówki amerykańskie 250g', 'Owoce', 'opak'),
+
+-- Mięso świeże
+('Pierś z kurczaka tacka', 'Mięso', 'kg'),
+('Filet z indyka', 'Mięso', 'kg'),
+('Schab bez kości', 'Mięso', 'kg'),
+('Karkówka wieprzowa', 'Mięso', 'kg'),
+('Mięso mielone wieprzowe', 'Mięso', 'kg'),
+('Mięso mielone wołowe', 'Mięso', 'kg'),
+
+-- Wędliny
+('Szynka konserwowa plastry 120g', 'Wędliny', 'szt'),
+('Szynka drobiowa plastry 100g', 'Wędliny', 'szt'),
+('Kiełbasa śląska 550g', 'Wędliny', 'szt'),
+('Parówki drobiowe 250g', 'Wędliny', 'szt'),
+('Salami pepperoni 150g', 'Wędliny', 'szt'),
+
+-- Ryby
+('Łosoś atlantycki świeży', 'Ryby', 'kg'),
+('Łosoś wędzony plastry 100g', 'Ryby', 'szt'),
+('Mintaj filet mrożony', 'Ryby', 'kg'),
+('Paluszki rybne 450g', 'Ryby', 'szt'),
+('Tuńczyk kawałki w sosie własnym', 'Ryby', 'szt'),
+
+-- Produkty sypkie
+('Ryż biały długoziarnisty 1kg', 'Produkty sypkie', 'szt'),
+('Ryż basmati 1kg', 'Produkty sypkie', 'szt'),
+('Makaron spaghetti 500g', 'Produkty sypkie', 'szt'),
+('Makaron penne 500g', 'Produkty sypkie', 'szt'),
+('Kasza gryczana prażona 1kg', 'Produkty sypkie', 'szt'),
+('Mąka pszenna typ 450 1kg', 'Produkty sypkie', 'szt'),
+('Cukier biały 1kg', 'Produkty sypkie', 'szt'),
+
+-- Oleje i tłuszcze
+('Olej rzepakowy 1l', 'Tłuszcze', 'szt'),
+('Olej słonecznikowy 1l', 'Tłuszcze', 'szt'),
+('Oliwa z oliwek extra virgin 500ml', 'Tłuszcze', 'szt'),
+
+-- Przyprawy
+('Sól kamienna jodowana 1kg', 'Przyprawy', 'szt'),
+('Pieprz czarny mielony 20g', 'Przyprawy', 'szt'),
+('Papryka słodka mielona 50g', 'Przyprawy', 'szt'),
+('Czosnek granulowany 40g', 'Przyprawy', 'szt'),
+('Przyprawa do kurczaka 30g', 'Przyprawy', 'szt'),
+
+-- Napoje
+('Woda niegazowana 1,5l', 'Napoje', 'szt'),
+('Woda gazowana 1,5l', 'Napoje', 'szt'),
+('Cola 2l', 'Napoje', 'szt'),
+('Sok jabłkowy 100% 1l', 'Napoje', 'szt'),
+('Sok pomarańczowy 100% 1l', 'Napoje', 'szt'),
+('Kawa mielona 500g', 'Napoje', 'szt'),
+('Herbata czarna ekspresowa 100 torebek', 'Napoje', 'opak'),
+
+-- Słodycze
+('Czekolada mleczna 100g', 'Słodycze', 'szt'),
+('Czekolada gorzka 70% 100g', 'Słodycze', 'szt'),
+('Wafel kakaowy', 'Słodycze', 'szt'),
+('Ciastka maślane 400g', 'Słodycze', 'szt'),
+('Baton czekoladowy', 'Słodycze', 'szt'),
+
+-- Mrożonki
+('Pizza margherita mrożona 300g', 'Mrożonki', 'szt'),
+('Pizza salami mrożona 350g', 'Mrożonki', 'szt'),
+('Frytki mrożone 1kg', 'Mrożonki', 'szt'),
+('Warzywa na patelnię 750g', 'Mrożonki', 'szt'),
+('Lody waniliowe 1l', 'Mrożonki', 'szt'),
+
+-- Chemia / higiena (typowe półki)
+('Płyn do naczyń cytrynowy 900ml', 'Chemia domowa', 'szt'),
+('Proszek do prania kolor 4kg', 'Chemia domowa', 'szt'),
+('Płyn do płukania tkanin 2l', 'Chemia domowa', 'szt'),
+('Papier toaletowy 8 rolek', 'Chemia domowa', 'opak'),
+('Ręczniki papierowe 2 rolki', 'Chemia domowa', 'opak'),
+('Mydło w płynie 500ml', 'Higiena', 'szt'),
+('Szampon do włosów 400ml', 'Higiena', 'szt'),
+('Żel pod prysznic 400ml', 'Higiena', 'szt'),
+('Pasta do zębów 75ml', 'Higiena', 'szt');

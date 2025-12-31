@@ -45,7 +45,7 @@ const requireRole = (...roles) => (req, res, next) => {
 
 // Rejestracja
 app.post('/api/auth/register', [
-  body('email').isEmail({ require_tld: false }).normalizeEmail(),
+  body('email').isEmail({ require_tld: false }),
   body('password').isLength({ min: 6 }),
   body('name').trim().isLength({ min: 2 })
 ], async (req, res) => {
@@ -78,7 +78,7 @@ app.post('/api/auth/register', [
 
 // Logowanie
 app.post('/api/auth/login', [
-  body('email').isEmail({ require_tld: false }).normalizeEmail(),
+  body('email').isEmail({ require_tld: false }),
   body('password').notEmpty()
 ], async (req, res) => {
   const errors = validationResult(req);
@@ -289,6 +289,39 @@ app.post('/api/auth/groups/:id/members', verifyToken, [
   }
 });
 
+// Usuwanie członka z grupy
+app.delete('/api/auth/groups/:id/members/:userId', verifyToken, async (req, res) => {
+  try {
+    // Sprawdź czy użytkownik ma uprawnienia
+    const access = await pool.query(
+      'SELECT role FROM user_groups WHERE user_id = $1 AND group_id = $2',
+      [req.user.id, req.params.id]
+    );
+    if (access.rows.length === 0 || !['owner', 'admin'].includes(access.rows[0].role)) {
+      return res.status(403).json({ error: 'Brak uprawnień' });
+    }
+
+    // Nie można usunąć ownera
+    const targetRole = await pool.query(
+      'SELECT role FROM user_groups WHERE user_id = $1 AND group_id = $2',
+      [req.params.userId, req.params.id]
+    );
+    if (targetRole.rows[0]?.role === 'owner') {
+      return res.status(400).json({ error: 'Nie można usunąć właściciela grupy' });
+    }
+
+    await pool.query(
+      'DELETE FROM user_groups WHERE user_id = $1 AND group_id = $2',
+      [req.params.userId, req.params.id]
+    );
+
+    res.json({ message: 'Usunięto z grupy' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
 app.get('/api/auth/groups/:id/members', verifyToken, async (req, res) => {
   try {
     const result = await pool.query(`
@@ -309,22 +342,4 @@ app.get('/api/auth/groups/:id/members', verifyToken, async (req, res) => {
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 const PORT = process.env.SERVICE_PORT || 8081;
-
-// Inicjalizacja admina przy starcie
-async function initAdmin() {
-  const { ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_NAME } = process.env;
-  if (!ADMIN_EMAIL || !ADMIN_PASSWORD) return;
-  
-  const existing = await pool.query('SELECT id FROM users WHERE email = $1', [ADMIN_EMAIL]);
-  if (existing.rows.length === 0) {
-    const hash = await bcrypt.hash(ADMIN_PASSWORD, 10);
-    await pool.query(
-      'INSERT INTO users (email, password_hash, name, role, is_approved) VALUES ($1, $2, $3, $4, TRUE)',
-      [ADMIN_EMAIL, hash, ADMIN_NAME || 'Admin', 'admin']
-    );
-    console.log('Admin user created:', ADMIN_EMAIL);
-  }
-}
-
-initAdmin().catch(console.error);
 app.listen(PORT, () => console.log(`Auth service running on port ${PORT}`));

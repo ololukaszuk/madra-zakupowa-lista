@@ -60,6 +60,11 @@ const Icons = {
   user: h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2 },
     h('path', { d: 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2' }),
     h('circle', { cx: 12, cy: 7, r: 4 })),
+  users: h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2 },
+    h('path', { d: 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2' }),
+    h('circle', { cx: 9, cy: 7, r: 4 }),
+    h('path', { d: 'M23 21v-2a4 4 0 0 0-3-3.87' }),
+    h('path', { d: 'M16 3.13a4 4 0 0 1 0 7.75' })),
   folder: h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2 },
     h('path', { d: 'M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z' })),
   settings: h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2 },
@@ -71,7 +76,16 @@ const Icons = {
   logout: h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2 },
     h('path', { d: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4' }),
     h('polyline', { points: '16 17 21 12 16 7' }),
-    h('line', { x1: 21, y1: 12, x2: 9, y2: 12 }))
+    h('line', { x1: 21, y1: 12, x2: 9, y2: 12 })),
+  share: h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2 },
+    h('circle', { cx: 18, cy: 5, r: 3 }),
+    h('circle', { cx: 6, cy: 12, r: 3 }),
+    h('circle', { cx: 18, cy: 19, r: 3 }),
+    h('line', { x1: 8.59, y1: 13.51, x2: 15.42, y2: 17.49 }),
+    h('line', { x1: 15.41, y1: 6.51, x2: 8.59, y2: 10.49 })),
+  x: h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2 },
+    h('line', { x1: 18, y1: 6, x2: 6, y2: 18 }),
+    h('line', { x1: 6, y1: 6, x2: 18, y2: 18 }))
 };
 
 // Toast Component
@@ -89,6 +103,16 @@ function useToast() {
   const showToast = (message) => setToast(message);
   const ToastComponent = toast ? h(Toast, { message: toast, onClose: () => setToast(null) }) : null;
   return [showToast, ToastComponent];
+}
+
+// Modal Component
+function Modal({ title, onClose, children }) {
+  return h('div', { className: 'modal-overlay', onClick: onClose },
+    h('div', { className: 'modal', onClick: e => e.stopPropagation() },
+      h('div', { className: 'modal-header' },
+        h('h3', null, title),
+        h('button', { className: 'btn btn-icon', onClick: onClose }, Icons.x)),
+      h('div', { className: 'modal-body' }, children)));
 }
 
 // Login Component
@@ -174,20 +198,26 @@ function Login({ onLogin }) {
 }
 
 // Profiles List
-function ProfilesList({ onSelect, onCreateNew }) {
+function ProfilesList({ user, onSelect, onCreateNew, onManageGroups }) {
   const [profiles, setProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showShareModal, setShowShareModal] = useState(null);
+  const [showToast, ToastComponent] = useToast();
   
-  useEffect(() => {
+  const loadProfiles = useCallback(() => {
     api.get('/api/profiles').then(setProfiles).finally(() => setLoading(false));
   }, []);
+  
+  useEffect(() => { loadProfiles(); }, [loadProfiles]);
   
   if (loading) return h('div', { className: 'loading' }, h('div', { className: 'spinner' }), 'Ładowanie...');
   
   return h('div', null,
     h('div', { className: 'flex-between mb-2' },
       h('h2', null, 'Profile zakupowe'),
-      h('button', { className: 'btn btn-primary btn-sm', onClick: onCreateNew }, Icons.plus, ' Nowy')),
+      h('div', { className: 'flex gap-1' },
+        h('button', { className: 'btn btn-outline btn-sm', onClick: onManageGroups }, Icons.users, ' Grupy'),
+        h('button', { className: 'btn btn-primary btn-sm', onClick: onCreateNew }, Icons.plus, ' Nowy'))),
     profiles.length === 0 
       ? h('div', { className: 'empty-state' },
           Icons.folder,
@@ -195,16 +225,329 @@ function ProfilesList({ onSelect, onCreateNew }) {
           h('button', { className: 'btn btn-primary mt-2', onClick: onCreateNew }, 'Utwórz pierwszy profil'))
       : profiles.map(p => h('div', { 
           key: p.id, 
-          className: 'card', 
-          onClick: () => onSelect(p),
+          className: 'card mb-1'
+        },
+          h('div', { className: 'card-body flex-between' },
+            h('div', { 
+              style: { flex: 1, cursor: 'pointer' },
+              onClick: () => onSelect(p)
+            },
+              h('strong', null, p.name),
+              p.description && h('p', { className: 'text-sm text-muted' }, p.description),
+              p.group_name && h('span', { className: 'badge badge-primary text-sm' }, `Grupa: ${p.group_name}`)),
+            h('div', { className: 'flex gap-1' },
+              h('button', { 
+                className: 'btn btn-icon btn-sm',
+                onClick: (e) => { e.stopPropagation(); setShowShareModal(p); },
+                title: 'Udostępnij'
+              }, Icons.share))))),
+    
+    showShareModal && h(ShareProfileModal, {
+      profile: showShareModal,
+      onClose: () => setShowShareModal(null),
+      onShared: () => { loadProfiles(); showToast('Udostępniono profil'); }
+    }),
+    
+    ToastComponent);
+}
+
+// Share Profile Modal
+function ShareProfileModal({ profile, onClose, onShared }) {
+  const [groups, setGroups] = useState([]);
+  const [selectedGroup, setSelectedGroup] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  
+  useEffect(() => {
+    api.get('/api/auth/groups').then(setGroups).finally(() => setLoading(false));
+  }, []);
+  
+  const handleShare = async () => {
+    if (!selectedGroup) return;
+    setSaving(true);
+    setError('');
+    try {
+      await api.put(`/api/profiles/${profile.id}`, { groupId: selectedGroup });
+      onShared();
+      onClose();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+  
+  const handleUnshare = async () => {
+    setSaving(true);
+    try {
+      await api.put(`/api/profiles/${profile.id}`, { groupId: null });
+      onShared();
+      onClose();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+  
+  return h(Modal, { title: `Udostępnij: ${profile.name}`, onClose },
+    loading 
+      ? h('div', { className: 'loading' }, h('div', { className: 'spinner' }))
+      : h('div', null,
+          profile.group_id && h('div', { className: 'mb-2', style: { padding: '0.75rem', background: 'var(--bg)', borderRadius: '0.5rem' } },
+            h('p', { className: 'text-sm' }, 'Profil jest udostępniony grupie: ', h('strong', null, profile.group_name)),
+            h('button', { 
+              className: 'btn btn-outline btn-sm mt-1',
+              onClick: handleUnshare,
+              disabled: saving
+            }, 'Cofnij udostępnienie')),
+          
+          groups.length === 0
+            ? h('p', { className: 'text-muted' }, 'Nie masz żadnych grup. Utwórz grupę, aby móc udostępniać profile.')
+            : h('div', null,
+                h('label', { className: 'form-label' }, 'Wybierz grupę'),
+                h('select', {
+                  className: 'form-input',
+                  value: selectedGroup,
+                  onChange: e => setSelectedGroup(e.target.value)
+                },
+                  h('option', { value: '' }, '-- Wybierz grupę --'),
+                  groups.map(g => h('option', { key: g.id, value: g.id }, g.name))),
+                
+                error && h('div', { style: { color: 'var(--danger)', marginTop: '0.5rem' } }, error),
+                
+                h('button', {
+                  className: 'btn btn-primary btn-block mt-2',
+                  onClick: handleShare,
+                  disabled: !selectedGroup || saving
+                }, saving ? 'Udostępnianie...' : 'Udostępnij grupie'))));
+}
+
+// Groups Management
+function GroupsManagement({ onBack }) {
+  const [groups, setGroups] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreate, setShowCreate] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [showToast, ToastComponent] = useToast();
+  
+  const loadGroups = useCallback(() => {
+    api.get('/api/auth/groups').then(setGroups).finally(() => setLoading(false));
+  }, []);
+  
+  useEffect(() => { loadGroups(); }, [loadGroups]);
+  
+  if (loading) return h('div', { className: 'loading' }, h('div', { className: 'spinner' }));
+  
+  if (selectedGroup) {
+    return h(GroupDetail, {
+      group: selectedGroup,
+      onBack: () => { setSelectedGroup(null); loadGroups(); },
+      showToast
+    });
+  }
+  
+  return h('div', null,
+    h('div', { className: 'flex-between mb-2' },
+      h('div', { className: 'flex gap-1', style: { alignItems: 'center' } },
+        h('button', { className: 'btn btn-icon btn-outline', onClick: onBack }, Icons.back),
+        h('h2', null, 'Grupy')),
+      h('button', { className: 'btn btn-primary btn-sm', onClick: () => setShowCreate(true) }, Icons.plus, ' Nowa')),
+    
+    showCreate && h(CreateGroupForm, {
+      onCreated: () => { setShowCreate(false); loadGroups(); showToast('Grupa utworzona'); },
+      onCancel: () => setShowCreate(false)
+    }),
+    
+    groups.length === 0
+      ? h('div', { className: 'empty-state' },
+          Icons.users,
+          h('p', null, 'Nie masz jeszcze żadnych grup'),
+          h('button', { className: 'btn btn-primary mt-2', onClick: () => setShowCreate(true) }, 'Utwórz pierwszą grupę'))
+      : groups.map(g => h('div', {
+          key: g.id,
+          className: 'card mb-1',
+          onClick: () => setSelectedGroup(g),
           style: { cursor: 'pointer' }
         },
           h('div', { className: 'card-body flex-between' },
             h('div', null,
-              h('strong', null, p.name),
-              p.description && h('p', { className: 'text-sm text-muted' }, p.description)),
-            h('span', { className: `badge ${p.is_shared ? 'badge-primary' : 'badge-success'}` },
-              p.is_shared ? 'Wspólny' : 'Prywatny')))));
+              h('strong', null, g.name),
+              g.description && h('p', { className: 'text-sm text-muted' }, g.description)),
+            h('span', { className: 'badge badge-primary' }, g.user_role)))),
+    
+    ToastComponent);
+}
+
+// Create Group Form
+function CreateGroupForm({ onCreated, onCancel }) {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setLoading(true);
+    setError('');
+    try {
+      await api.post('/api/auth/groups', { name, description });
+      onCreated();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  return h('div', { className: 'card mb-2' },
+    h('div', { className: 'card-header' },
+      h('strong', null, 'Nowa grupa'),
+      h('button', { className: 'btn btn-sm btn-outline', onClick: onCancel }, 'Anuluj')),
+    h('div', { className: 'card-body' },
+      h('form', { onSubmit: handleSubmit },
+        h('div', { className: 'form-group' },
+          h('input', {
+            className: 'form-input',
+            placeholder: 'Nazwa grupy',
+            value: name,
+            onChange: e => setName(e.target.value),
+            required: true
+          })),
+        h('div', { className: 'form-group' },
+          h('input', {
+            className: 'form-input',
+            placeholder: 'Opis (opcjonalnie)',
+            value: description,
+            onChange: e => setDescription(e.target.value)
+          })),
+        error && h('div', { style: { color: 'var(--danger)', marginBottom: '0.5rem' } }, error),
+        h('button', { className: 'btn btn-primary', disabled: loading },
+          loading ? 'Tworzenie...' : 'Utwórz grupę'))));
+}
+
+// Group Detail
+function GroupDetail({ group, onBack, showToast }) {
+  const [members, setMembers] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [selectedUser, setSelectedUser] = useState('');
+  const [memberRole, setMemberRole] = useState('member');
+  const [adding, setAdding] = useState(false);
+  
+  const loadMembers = useCallback(() => {
+    api.get(`/api/auth/groups/${group.id}/members`).then(setMembers).finally(() => setLoading(false));
+  }, [group.id]);
+  
+  useEffect(() => { loadMembers(); }, [loadMembers]);
+  
+  const loadAllUsers = async () => {
+    try {
+      const users = await api.get('/api/auth/users');
+      setAllUsers(users.filter(u => !members.find(m => m.id === u.id)));
+    } catch (err) {
+      setAllUsers([]);
+    }
+  };
+  
+  const handleAddMember = async () => {
+    if (!selectedUser) return;
+    setAdding(true);
+    try {
+      await api.post(`/api/auth/groups/${group.id}/members`, { userId: selectedUser, role: memberRole });
+      showToast('Dodano do grupy');
+      setShowAddMember(false);
+      setSelectedUser('');
+      loadMembers();
+    } catch (err) {
+      showToast('Błąd: ' + err.message);
+    } finally {
+      setAdding(false);
+    }
+  };
+  
+  const removeMember = async (userId) => {
+    if (!confirm('Usunąć użytkownika z grupy?')) return;
+    try {
+      await api.delete(`/api/auth/groups/${group.id}/members/${userId}`);
+      showToast('Usunięto z grupy');
+      loadMembers();
+    } catch (err) {
+      showToast('Błąd: ' + err.message);
+    }
+  };
+  
+  const canManage = group.user_role === 'owner' || group.user_role === 'admin';
+  
+  return h('div', null,
+    h('div', { className: 'flex-between mb-2' },
+      h('div', { className: 'flex gap-1', style: { alignItems: 'center' } },
+        h('button', { className: 'btn btn-icon btn-outline', onClick: onBack }, Icons.back),
+        h('div', null,
+          h('h2', null, group.name),
+          group.description && h('p', { className: 'text-sm text-muted' }, group.description))),
+      canManage && h('button', { 
+        className: 'btn btn-primary btn-sm',
+        onClick: () => { setShowAddMember(true); loadAllUsers(); }
+      }, Icons.plus, ' Dodaj')),
+    
+    showAddMember && h('div', { className: 'card mb-2' },
+      h('div', { className: 'card-header' },
+        h('strong', null, 'Dodaj członka'),
+        h('button', { className: 'btn btn-sm btn-outline', onClick: () => setShowAddMember(false) }, 'Anuluj')),
+      h('div', { className: 'card-body' },
+        allUsers.length === 0
+          ? h('p', { className: 'text-muted' }, 'Brak dostępnych użytkowników do dodania')
+          : h('div', null,
+              h('div', { className: 'form-group' },
+                h('label', { className: 'form-label' }, 'Użytkownik'),
+                h('select', {
+                  className: 'form-input',
+                  value: selectedUser,
+                  onChange: e => setSelectedUser(e.target.value)
+                },
+                  h('option', { value: '' }, '-- Wybierz --'),
+                  allUsers.map(u => h('option', { key: u.id, value: u.id }, `${u.name} (${u.email})`)))),
+              h('div', { className: 'form-group' },
+                h('label', { className: 'form-label' }, 'Rola'),
+                h('select', {
+                  className: 'form-input',
+                  value: memberRole,
+                  onChange: e => setMemberRole(e.target.value)
+                },
+                  h('option', { value: 'member' }, 'Członek'),
+                  h('option', { value: 'admin' }, 'Admin'))),
+              h('button', {
+                className: 'btn btn-primary',
+                onClick: handleAddMember,
+                disabled: !selectedUser || adding
+              }, adding ? 'Dodawanie...' : 'Dodaj')))),
+    
+    loading
+      ? h('div', { className: 'loading' }, h('div', { className: 'spinner' }))
+      : h('div', { className: 'card' },
+          h('div', { className: 'card-header' },
+            h('strong', null, 'Członkowie'),
+            h('span', { className: 'badge badge-primary' }, members.length)),
+          h('div', { className: 'card-body' },
+            members.map(m => h('div', {
+              key: m.id,
+              className: 'flex-between',
+              style: { padding: '0.75rem 0', borderBottom: '1px solid var(--border)' }
+            },
+              h('div', null,
+                h('strong', null, m.name),
+                h('div', { className: 'text-sm text-muted' }, m.email)),
+              h('div', { className: 'flex gap-1', style: { alignItems: 'center' } },
+                h('span', { className: `badge ${m.role === 'owner' ? 'badge-warning' : 'badge-primary'}` }, m.role),
+                canManage && m.role !== 'owner' && h('button', {
+                  className: 'btn btn-icon btn-sm',
+                  onClick: () => removeMember(m.id),
+                  style: { color: 'var(--danger)' }
+                }, Icons.trash)))))));
 }
 
 // Create Profile
@@ -259,6 +602,13 @@ function ShoppingLists({ profile, onSelectList, onBack }) {
   const [newListName, setNewListName] = useState('');
   const [tab, setTab] = useState('active');
   
+  const getDefaultListName = useCallback(() => {
+    const today = new Date().toLocaleDateString('pl-PL');
+    const todayLists = lists.filter(l => l.name.startsWith(today));
+    if (todayLists.length === 0) return today;
+    return `${today} (${todayLists.length + 1})`;
+  }, [lists]);
+  
   const loadLists = useCallback(() => {
     api.get(`/api/profiles/${profile.id}/lists?status=${tab}`)
       .then(setLists)
@@ -267,13 +617,22 @@ function ShoppingLists({ profile, onSelectList, onBack }) {
   
   useEffect(() => { loadLists(); }, [loadLists]);
   
+  const openCreateForm = () => {
+    setNewListName(getDefaultListName());
+    setShowCreate(true);
+  };
+  
   const createList = async (e) => {
     e.preventDefault();
     if (!newListName.trim()) return;
-    await api.post(`/api/profiles/${profile.id}/lists`, { name: newListName });
-    setNewListName('');
-    setShowCreate(false);
-    loadLists();
+    try {
+      await api.post(`/api/profiles/${profile.id}/lists`, { name: newListName });
+      setNewListName('');
+      setShowCreate(false);
+      loadLists();
+    } catch (err) {
+      console.error(err);
+    }
   };
   
   return h('div', null,
@@ -281,7 +640,7 @@ function ShoppingLists({ profile, onSelectList, onBack }) {
       h('div', { className: 'flex gap-1', style: { alignItems: 'center' } },
         h('button', { className: 'btn btn-icon btn-outline', onClick: onBack }, Icons.back),
         h('h2', null, profile.name)),
-      h('button', { className: 'btn btn-primary btn-sm', onClick: () => setShowCreate(true) }, Icons.plus, ' Lista')),
+      h('button', { className: 'btn btn-primary btn-sm', onClick: openCreateForm }, Icons.plus, ' Lista')),
     
     showCreate && h('form', { className: 'add-item-form', onSubmit: createList },
       h('input', {
@@ -291,7 +650,12 @@ function ShoppingLists({ profile, onSelectList, onBack }) {
         onChange: e => setNewListName(e.target.value),
         autoFocus: true
       }),
-      h('button', { className: 'btn btn-primary' }, 'Utwórz')),
+      h('button', { className: 'btn btn-primary' }, 'Utwórz'),
+      h('button', { 
+        className: 'btn btn-outline', 
+        type: 'button',
+        onClick: () => setShowCreate(false) 
+      }, 'Anuluj')),
     
     h('div', { className: 'tabs' },
       h('button', { className: `tab ${tab === 'active' ? 'active' : ''}`, onClick: () => setTab('active') }, 'Aktywne'),
@@ -305,7 +669,7 @@ function ShoppingLists({ profile, onSelectList, onBack }) {
             h('p', null, tab === 'active' ? 'Brak aktywnych list' : 'Brak ukończonych list'))
         : lists.map(list => h('div', { 
             key: list.id, 
-            className: 'card',
+            className: 'card mb-1',
             onClick: () => onSelectList(list),
             style: { cursor: 'pointer' }
           },
@@ -314,14 +678,14 @@ function ShoppingLists({ profile, onSelectList, onBack }) {
                 h('strong', null, list.name),
                 h('span', { className: 'text-sm text-muted' },
                   `${list.checked_items || 0}/${list.total_items || 0}`)),
-              list.total_items > 0 && h('div', { className: 'progress mt-2' },
+              list.total_items > 0 && h('div', { className: 'progress mt-1' },
                 h('div', { 
                   className: 'progress-bar',
                   style: { width: `${(list.checked_items / list.total_items) * 100}%` }
                 }))))));
 }
 
-// Shopping List Detail (Main checklist view)
+// Shopping List Detail
 function ShoppingListDetail({ list: initialList, profileId, onBack }) {
   const [list, setList] = useState(initialList);
   const [items, setItems] = useState([]);
@@ -335,15 +699,19 @@ function ShoppingListDetail({ list: initialList, profileId, onBack }) {
   const inputRef = useRef(null);
   
   const loadList = useCallback(async () => {
-    const data = await api.get(`/api/lists/${list.id}`);
-    setList(data);
-    setItems(data.items || []);
-    setLoading(false);
+    try {
+      const data = await api.get(`/api/lists/${list.id}`);
+      setList(data);
+      setItems(data.items || []);
+    } catch (err) {
+      console.error('Error loading list:', err);
+    } finally {
+      setLoading(false);
+    }
   }, [list.id]);
   
   useEffect(() => { loadList(); }, [loadList]);
   
-  // Fetch suggestions
   const fetchSuggestions = async (query) => {
     if (query.length < 2) {
       setSuggestions([]);
@@ -386,7 +754,6 @@ function ShoppingListDetail({ list: initialList, profileId, onBack }) {
       setNewUnit(suggestion.suggestedUnit || suggestion.defaultUnit);
     }
     
-    // Get quantity suggestion
     try {
       const qty = await api.get(`/api/suggestions/profile/${profileId}/quantity/${encodeURIComponent(suggestion.name)}`);
       if (qty.basedOnHistory) {
@@ -402,35 +769,51 @@ function ShoppingListDetail({ list: initialList, profileId, onBack }) {
     e.preventDefault();
     if (!newItem.trim()) return;
     
-    await api.post(`/api/lists/${list.id}/items`, {
-      name: newItem,
-      quantity: parseFloat(newQty) || 1,
-      unit: newUnit
-    });
-    
-    setNewItem('');
-    setNewQty('1');
-    setSuggestions([]);
-    loadList();
-    showToast('Dodano do listy');
+    try {
+      await api.post(`/api/lists/${list.id}/items`, {
+        name: newItem,
+        quantity: parseFloat(newQty) || 1,
+        unit: newUnit
+      });
+      
+      setNewItem('');
+      setNewQty('1');
+      setSuggestions([]);
+      await loadList();
+      showToast('Dodano do listy');
+    } catch (err) {
+      showToast('Błąd: ' + err.message);
+    }
   };
   
   const toggleItem = async (item) => {
-    await api.put(`/api/items/${item.id}`, { isChecked: !item.is_checked });
-    loadList();
+    try {
+      await api.put(`/api/items/${item.id}`, { isChecked: !item.is_checked });
+      await loadList();
+    } catch (err) {
+      showToast('Błąd: ' + err.message);
+    }
   };
   
   const deleteItem = async (item) => {
-    await api.delete(`/api/items/${item.id}`);
-    loadList();
-    showToast('Usunięto');
+    try {
+      await api.delete(`/api/items/${item.id}`);
+      await loadList();
+      showToast('Usunięto');
+    } catch (err) {
+      showToast('Błąd: ' + err.message);
+    }
   };
   
   const completeList = async () => {
     if (!confirm('Czy zakończyć tę listę zakupów?')) return;
-    await api.put(`/api/lists/${list.id}`, { status: 'completed' });
-    showToast('Lista zakończona');
-    onBack();
+    try {
+      await api.put(`/api/lists/${list.id}`, { status: 'completed' });
+      showToast('Lista zakończona');
+      onBack();
+    } catch (err) {
+      showToast('Błąd: ' + err.message);
+    }
   };
   
   if (loading) return h('div', { className: 'loading' }, h('div', { className: 'spinner' }));
@@ -508,10 +891,7 @@ function ShoppingListDetail({ list: initialList, profileId, onBack }) {
             h('p', null, 'Lista jest pusta'))
         : h('ul', { className: 'checklist' },
             unchecked.map(item => h('li', { key: item.id, className: 'checklist-item' },
-              h('div', { 
-                className: 'checkbox', 
-                onClick: () => toggleItem(item) 
-              }),
+              h('div', { className: 'checkbox', onClick: () => toggleItem(item) }),
               h('div', { className: 'item-content' },
                 h('div', { className: 'item-name' }, item.name),
                 h('div', { className: 'item-meta' }, `${item.quantity} ${item.unit || 'szt'}`)),
@@ -525,10 +905,7 @@ function ShoppingListDetail({ list: initialList, profileId, onBack }) {
               style: { padding: '0.5rem 1rem', background: 'var(--bg)', fontWeight: 500, fontSize: '0.875rem' } 
             }, `Kupione (${checked.length})`),
             checked.map(item => h('li', { key: item.id, className: 'checklist-item checked' },
-              h('div', { 
-                className: 'checkbox checked', 
-                onClick: () => toggleItem(item) 
-              }, Icons.check),
+              h('div', { className: 'checkbox checked', onClick: () => toggleItem(item) }, Icons.check),
               h('div', { className: 'item-content' },
                 h('div', { className: 'item-name' }, item.name),
                 h('div', { className: 'item-meta' }, `${item.quantity} ${item.unit || 'szt'}`)),
@@ -762,13 +1139,19 @@ function App() {
     switch (view) {
       case 'profiles':
         return h(ProfilesList, {
+          user,
           onSelect: setSelectedProfile,
-          onCreateNew: () => setView('create-profile')
+          onCreateNew: () => setView('create-profile'),
+          onManageGroups: () => setView('groups')
         });
       case 'create-profile':
         return h(CreateProfile, {
           onCreated: (profile) => { setSelectedProfile(profile); setView('profiles'); },
           onCancel: () => setView('profiles')
+        });
+      case 'groups':
+        return h(GroupsManagement, {
+          onBack: () => setView('profiles')
         });
       case 'analytics':
         return selectedProfile 
